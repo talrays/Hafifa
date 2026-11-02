@@ -24,17 +24,16 @@ def main() -> None:
     """Run the pipeline. On a fatal error, log and exit 1."""
     try:
         config = Config.from_env()
+        run_pipeline(config)
     except ConfigError as exc:
         logger.error("Invalid configuration: %s", exc)
-        sys.exit(EXIT_CODE_FAILURE)
-    try:
-        run_pipeline(config)
     except PipelineError as exc:
         logger.error("Pipeline failed: %s", exc)
-        sys.exit(EXIT_CODE_FAILURE)
     except Exception:
         logger.exception("Unexpected error")
-        sys.exit(EXIT_CODE_FAILURE)
+    else:
+        return
+    sys.exit(EXIT_CODE_FAILURE)
 
 
 if __name__ == "__main__":
