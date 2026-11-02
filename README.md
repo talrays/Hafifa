@@ -129,6 +129,7 @@ Introduction to Redis and learning the syntax
 ### Duration: 5 hours
 
 - [SQL Challenge](https://mystery.knightlab.com/)
+- [More SQL](https://leetdata.ai/problems) - do 5 problems in each difficulty 
 
 ---
 

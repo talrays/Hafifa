@@ -1,0 +1,14 @@
+[project]
+name = "threading-multiprocessing"
+version = "0.1.0"
+description = "Multithreaded Yahoo Finance fetch for BTC, GOOGL, and AMZN minute bars"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "yfinance>=0.2,<1",
+    "pandas>=2.0,<3",
+    "pydantic-settings>=2.0,<3",
+]
+
+[tool.uv]
+package = false

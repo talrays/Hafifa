@@ -1,0 +1,97 @@
+"""Orchestrate timestamp loading, parallel Yahoo fetches, and CSV output.
+
+``run_pipeline`` is the only public entry point. It validates each ticker's
+fetch window, downloads OHLCV in parallel, builds ``Stock`` instances from each
+result, and writes the combined report.
+"""
+
+from logging import getLogger
+
+import pandas as pd
+
+from settings import Settings
+from loader import read_timestamps_from_txt
+from models import Stock, StockTicker
+from client import get_stock_data, validate_date_range
+from threads import run_in_parallel
+from report import write_report, build_report
+from errors import PipelineError
+from constants import MAX_FETCH_DAYS
+
+logger = getLogger(__name__)
+
+def run_pipeline(settings: Settings) -> None:
+    """Load timestamps, fetch OHLCV for each ticker, and write the CSV report.
+
+    For each ticker, required minutes are read from ``settings.timestamps_file_path_dict``,
+    the min/max minute define the Yahoo window, and ``validate_date_range`` must pass
+    before a download job is queued. Jobs run in a pool of ``settings.max_workers``
+    threads; futures are consumed in ticker order after all jobs complete.
+
+    Raises:
+        PipelineError: When any ticker's window is invalid, any fetch fails, or
+            report building or writing fails. Failures are summarized in the message;
+            per-ticker errors are also logged at ERROR.
+        FileNotFoundError: When a timestamp file is missing (from the loader).
+        ValueError: When a timestamp file is empty or malformed (from the loader).
+    """
+    logger.info("Starting pipeline")
+    fetch_jobs = []
+    load_specs: list[tuple[StockTicker, pd.Series]] = []
+    window_failures: list[tuple[str, Exception]] = []
+    for ticker in settings.stock_tickers:
+        path = settings.timestamps_file_path_dict[ticker]
+        timestamps = read_timestamps_from_txt(path)
+        start, end = timestamps.min(), timestamps.max()
+        try:
+            validate_date_range(start, end)
+        except ValueError as exc:
+            logger.error(
+                f"{ticker.value} timestamps in {path} span {start} to {end}; "
+                f"Yahoo only serves the last {MAX_FETCH_DAYS} days: {exc}"
+            )
+            window_failures.append((ticker.value, exc))
+            continue
+        logger.info(
+            f"Loaded {ticker.value}: {len(timestamps)} required minutes from {path} "
+            f"(fetch window {start} to {end})"
+        )
+        load_specs.append((ticker, timestamps))
+        fetch_jobs.append((get_stock_data, (ticker, start, end), {}))
+
+    if window_failures:
+        summary = "; ".join(f"{ticker}: {exc}" for ticker, exc in window_failures)
+        raise PipelineError(summary)
+
+    futures = run_in_parallel(fetch_jobs, settings.max_workers)
+    results = []
+    failures: list[tuple[str, Exception]] = []
+    for (ticker, _timestamps), future in zip(load_specs, futures):
+        try:
+            results.append(future.result())
+        except Exception as exc:
+            logger.error(f"Fetch failed for {ticker.value}: {exc}")
+            failures.append((ticker.value, exc))
+
+    if failures:
+        summary = "; ".join(f"{ticker}: {exc}" for ticker, exc in failures)
+        raise PipelineError(summary)
+
+    stocks: list[Stock] = []
+    for (ticker, timestamps), data in zip(load_specs, results):
+        stock = Stock(ticker, timestamps, data)
+        stocks.append(stock)
+        matched = len(stock.get_required_data())
+        logger.info(
+            f"Built {ticker.value}: {len(data)} downloaded bars, "
+            f"{matched} rows match required minutes"
+        )
+    logger.info(f"Building report for {len(stocks)} tickers")
+    try:
+        report = build_report(stocks)
+        write_report(settings.destination_file_path, report)
+    except Exception as exc:
+        logger.error(f"Report failed: {exc}")
+        raise PipelineError(f"Report failed: {exc}")
+        
+    logger.info("Pipeline completed successfully")
