@@ -1,14 +1,17 @@
 """Orchestrate timestamp loading, parallel Yahoo fetches, and CSV output.
 
 ``run_pipeline`` is the only public entry point. It validates each ticker's
-fetch window, downloads OHLCV in parallel, merges bars into ``Stock`` models,
-and writes the combined report.
+fetch window, downloads OHLCV in parallel, builds ``Stock`` instances from each
+result, and writes the combined report.
 """
 
 from logging import getLogger
+
+import pandas as pd
+
 from config import Config
 from loader import read_timestamps_from_txt
-from models import Stock
+from models import Stock, StockTicker
 from client import get_stock_data, validate_date_range
 from threads import run_in_parallel
 from report import write_report, build_report
@@ -34,14 +37,12 @@ def run_pipeline(config: Config) -> None:
     """
     logger.info("Starting pipeline")
     fetch_jobs = []
-    stocks = []
+    load_specs: list[tuple[StockTicker, pd.Series]] = []
     window_failures: list[tuple[str, Exception]] = []
     for ticker in config.stock_tickers:
         path = config.timestamps_file_path_dict[ticker]
         timestamps = read_timestamps_from_txt(path)
-        stock = Stock(ticker, required_timestamps=timestamps)
-        start = stock.get_min_required_timestamp()
-        end = stock.get_max_required_timestamp()
+        start, end = timestamps.min(), timestamps.max()
         try:
             validate_date_range(start, end)
         except ValueError as exc:
@@ -64,7 +65,7 @@ def run_pipeline(config: Config) -> None:
             start,
             end,
         )
-        stocks.append(stock)
+        load_specs.append((ticker, timestamps))
         fetch_jobs.append((get_stock_data, (ticker, start, end), {}))
 
     if window_failures:
@@ -74,23 +75,25 @@ def run_pipeline(config: Config) -> None:
     futures = run_in_parallel(fetch_jobs, config.max_workers)
     results = []
     failures: list[tuple[str, Exception]] = []
-    for stock, future in zip(stocks, futures):
+    for (ticker, _timestamps), future in zip(load_specs, futures):
         try:
             results.append(future.result())
         except Exception as exc:
-            logger.error("Fetch failed for %s: %s", stock.ticker.value, exc)
-            failures.append((stock.ticker.value, exc))
+            logger.error("Fetch failed for %s: %s", ticker.value, exc)
+            failures.append((ticker.value, exc))
 
     if failures:
         summary = "; ".join(f"{ticker}: {exc}" for ticker, exc in failures)
         raise PipelineError(summary)
 
-    for stock, data in zip(stocks, results):
-        stock.add_data(data)
+    stocks: list[Stock] = []
+    for (ticker, timestamps), data in zip(load_specs, results):
+        stock = Stock(ticker, timestamps, data)
+        stocks.append(stock)
         matched = len(stock.get_required_data())
         logger.info(
-            "Merged %s: %d downloaded bars, %d rows match required minutes",
-            stock.ticker.value,
+            "Built %s: %d downloaded bars, %d rows match required minutes",
+            ticker.value,
             len(data),
             matched,
         )

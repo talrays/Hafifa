@@ -77,9 +77,8 @@ Tickers are defined in `models.StockTicker` (`BTC`, `GOOGL`, `AMZN`). Filename s
 ```text
 data/{TICKER}.txt
     -> loader.read_timestamps_from_txt   (parse, floor to the minute)
-    -> Stock(required_timestamps)
     -> client.get_stock_data             (one thread-pool job per ticker)
-    -> Stock.add_data
+    -> Stock(ticker, required_timestamps, ohlcv)
     -> Stock.get_required_data           (rows whose index is a required minute)
     -> report.build_report / write_report
 ```
@@ -124,7 +123,7 @@ pipeline      → Starting pipeline
 pipeline      → Loaded {TICKER} (minute count, file, fetch window)
 threads       → Running N jobs in thread pool
 client        → Downloading / Downloaded {TICKER} (bar counts)
-pipeline      → Merged {TICKER} (downloaded vs required rows)
+pipeline      → Built {TICKER} (downloaded vs required rows)
 report        → Report slice per ticker, then file written with row count
 pipeline      → Pipeline completed successfully
 ```
