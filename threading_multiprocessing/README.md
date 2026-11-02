@@ -67,15 +67,15 @@ python main.py
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `DESTINATION_FILE_PATH` | `output.csv` | CSV written by `write_report` |
+| `DESTINATION_FILE_PATH` | `output/output.csv` | CSV written by `write_report` (relative to the project directory) |
 | `MAX_WORKERS` | `10` | Thread pool size for Yahoo downloads |
 
-Tickers, filename suffixes, the fetch window, and these defaults live in `constants.py`. The tickers are `BTC`, `GOOGL`, and `AMZN`. Each ticker’s timestamps are read from `{TICKER}.txt` in the working directory (`BTC.txt`, `GOOGL.txt`, `AMZN.txt`).
+Tickers, filename suffixes, the fetch window, and these defaults live in `constants.py`. The tickers are `BTC`, `GOOGL`, and `AMZN`. Each ticker’s timestamps are read from `data/{TICKER}.txt` (`data/BTC.txt`, `data/GOOGL.txt`, `data/AMZN.txt`). Paths are resolved from the project directory (where `config.py` lives), not the shell’s current working directory.
 
 ## Data flow
 
 ```text
-{TICKER}.txt
+data/{TICKER}.txt
     -> loader.read_timestamps_from_txt   (parse, floor to the minute)
     -> Stock(required_timestamps)
     -> client.get_stock_data             (one thread-pool job per ticker)
@@ -111,7 +111,7 @@ One timestamp per line:
 
 Parsed with `%Y-%m-%d %H:%M:%S.%f`, then floored to the minute. A missing file raises `FileNotFoundError`. A line that does not match, or a file with no lines, raises `ValueError`.
 
-The latest timestamp in each file must fall within the last `MAX_FETCH_DAYS` (30), or Yahoo cannot serve that ticker. The pipeline checks every file before any download starts. If `BTC.txt` still lists dates from months ago while `GOOGL.txt` and `AMZN.txt` are recent, only BTC will fail with that rule.
+The latest timestamp in each file must fall within the last `MAX_FETCH_DAYS` (30), or Yahoo cannot serve that ticker. The pipeline checks every file before any download starts. If `data/BTC.txt` still lists dates from months ago while `data/GOOGL.txt` and `data/AMZN.txt` are recent, only BTC will fail with that rule.
 
 ## Runtime log trace (INFO)
 

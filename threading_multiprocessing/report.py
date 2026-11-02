@@ -1,5 +1,7 @@
 """Turn per-ticker frames into the destination CSV."""
 
+from pathlib import Path
+
 import pandas as pd
 from logging import getLogger
 from models import Stock
@@ -16,7 +18,9 @@ def minute_price_change_pct(ohlcv: pd.DataFrame) -> pd.Series:
 
 def write_report(destination_file_path: str, report: pd.DataFrame) -> None:
     """Write ``report`` to ``destination_file_path`` without the index."""
-    report.to_csv(destination_file_path, index=False, columns=list(REPORT_COLUMNS))
+    destination = Path(destination_file_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    report.to_csv(destination, index=False, columns=list(REPORT_COLUMNS))
     logger.info("Report written to %s (%d rows)", destination_file_path, len(report))
 
 

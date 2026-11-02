@@ -4,8 +4,10 @@ from models import StockTicker
 from typing import List, Dict
 import os
 from logging import getLogger
+from pathlib import Path
 from dotenv import load_dotenv
 from constants import (
+    DATA_DIR,
     DEFAULT_DESTINATION_FILE_PATH,
     DEFAULT_MAX_WORKERS,
     DEFAULT_TICKERS,
@@ -15,6 +17,16 @@ from constants import (
     TIMESTAMP_FILE_SUFFIX,
 )
 from errors import ConfigError
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+
+def resolve_project_path(path: str) -> str:
+    """Turn a project-relative path into an absolute path under ``PROJECT_ROOT``."""
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return str(candidate)
+    return str(PROJECT_ROOT / candidate)
 
 logger = getLogger(__name__)
 
@@ -32,15 +44,17 @@ class Config:
     def from_env(cls) -> "Config":
         """Build config for BTC, GOOGL, and AMZN.
 
-        Timestamp files are ``{TICKER}.txt``. Destination path and worker count
+        Timestamp files are ``data/{TICKER}.txt``. Destination path and worker count
         fall back to ``DEFAULT_DESTINATION_FILE_PATH`` and ``DEFAULT_MAX_WORKERS``.
         """
-        load_dotenv()
+        load_dotenv(PROJECT_ROOT / ".env")
         stock_tickers = [StockTicker(symbol) for symbol in DEFAULT_TICKERS]
         timestamps_file_path_dict = {
-            ticker: f"{ticker.value}{TIMESTAMP_FILE_SUFFIX}" for ticker in stock_tickers
+            ticker: str(PROJECT_ROOT / DATA_DIR / f"{ticker.value}{TIMESTAMP_FILE_SUFFIX}")
+            for ticker in stock_tickers
         }
-        destination_file_path = os.getenv(ENV_DESTINATION_FILE_PATH, DEFAULT_DESTINATION_FILE_PATH)
+        destination_raw = os.getenv(ENV_DESTINATION_FILE_PATH, DEFAULT_DESTINATION_FILE_PATH)
+        destination_file_path = resolve_project_path(destination_raw)
         max_workers_raw = os.getenv(ENV_MAX_WORKERS, str(DEFAULT_MAX_WORKERS))
         try:
             max_workers = int(max_workers_raw)
