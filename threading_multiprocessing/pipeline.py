@@ -47,23 +47,14 @@ def run_pipeline(config: Config) -> None:
             validate_date_range(start, end)
         except ValueError as exc:
             logger.error(
-                "%s timestamps in %s span %s to %s; Yahoo only serves the last %s days: %s",
-                ticker.value,
-                path,
-                start,
-                end,
-                MAX_FETCH_DAYS,
-                exc,
+                f"{ticker.value} timestamps in {path} span {start} to {end}; "
+                f"Yahoo only serves the last {MAX_FETCH_DAYS} days: {exc}"
             )
             window_failures.append((ticker.value, exc))
             continue
         logger.info(
-            "Loaded %s: %d required minutes from %s (fetch window %s to %s)",
-            ticker.value,
-            len(timestamps),
-            path,
-            start,
-            end,
+            f"Loaded {ticker.value}: {len(timestamps)} required minutes from {path} "
+            f"(fetch window {start} to {end})"
         )
         load_specs.append((ticker, timestamps))
         fetch_jobs.append((get_stock_data, (ticker, start, end), {}))
@@ -79,7 +70,7 @@ def run_pipeline(config: Config) -> None:
         try:
             results.append(future.result())
         except Exception as exc:
-            logger.error("Fetch failed for %s: %s", ticker.value, exc)
+            logger.error(f"Fetch failed for {ticker.value}: {exc}")
             failures.append((ticker.value, exc))
 
     if failures:
@@ -92,17 +83,15 @@ def run_pipeline(config: Config) -> None:
         stocks.append(stock)
         matched = len(stock.get_required_data())
         logger.info(
-            "Built %s: %d downloaded bars, %d rows match required minutes",
-            ticker.value,
-            len(data),
-            matched,
+            f"Built {ticker.value}: {len(data)} downloaded bars, "
+            f"{matched} rows match required minutes"
         )
-    logger.info("Building report for %d tickers", len(stocks))
+    logger.info(f"Building report for {len(stocks)} tickers")
     try:
         report = build_report(stocks)
         write_report(config.destination_file_path, report)
     except Exception as exc:
-        logger.error("Report failed: %s", exc)
+        logger.error(f"Report failed: {exc}")
         raise PipelineError(f"Report failed: {exc}")
         
     logger.info("Pipeline completed successfully")

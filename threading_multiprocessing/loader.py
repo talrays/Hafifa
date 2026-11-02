@@ -47,10 +47,7 @@ def read_timestamps_from_txt(file_path: str) -> pd.Series:
         raise ValueError(f"No timestamps in {file_path}")
     timestamps = strip_seconds_and_microseconds(formatted_timestamps)
     logger.debug(
-        "Parsed %d timestamps from %s (%s to %s)",
-        len(timestamps),
-        file_path,
-        timestamps.min(),
-        timestamps.max(),
+        f"Parsed {len(timestamps)} timestamps from {file_path} "
+        f"({timestamps.min()} to {timestamps.max()})"
     )
     return timestamps

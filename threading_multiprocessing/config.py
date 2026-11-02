@@ -93,10 +93,8 @@ class Config:
             max_workers=max_workers,
         )
         logger.info(
-            "Config loaded: tickers=%s destination=%s max_workers=%d",
-            [ticker.value for ticker in stock_tickers],
-            destination_file_path,
-            max_workers,
+            f"Config loaded: tickers={[ticker.value for ticker in stock_tickers]} "
+            f"destination={destination_file_path} max_workers={max_workers}"
         )
         return config
     @property

@@ -29,7 +29,7 @@ def run_in_parallel(jobs: list[Job], max_workers: int) -> list[concurrent.future
     """
     if not jobs:
         return []
-    logger.info("Running %d jobs in thread pool (max_workers=%d)", len(jobs), max_workers)
+    logger.info(f"Running {len(jobs)} jobs in thread pool (max_workers={max_workers})")
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(func, *args, **kwargs) for func, args, kwargs in jobs]
         concurrent.futures.wait(futures)

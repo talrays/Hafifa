@@ -25,7 +25,7 @@ def write_report(destination_file_path: str, report: pd.DataFrame) -> None:
     destination = Path(destination_file_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     report.to_csv(destination, index=False, columns=list(REPORT_COLUMNS))
-    logger.info("Report written to %s (%d rows)", destination_file_path, len(report))
+    logger.info(f"Report written to {destination_file_path} ({len(report)} rows)")
 
 
 def build_report(stocks: list[Stock]) -> pd.DataFrame:
@@ -39,9 +39,7 @@ def build_report(stocks: list[Stock]) -> pd.DataFrame:
     for stock in stocks:
         ohlcv = stock.get_required_data()
         logger.info(
-            "Report slice %s: %d rows for required minutes",
-            stock.ticker.value,
-            len(ohlcv),
+            f"Report slice {stock.ticker.value}: {len(ohlcv)} rows for required minutes"
         )
         if ohlcv.empty:
             continue

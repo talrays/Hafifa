@@ -76,19 +76,15 @@ def get_stock_data(
     earliest = datetime.now() - timedelta(days=MAX_FETCH_DAYS)
     if start < earliest:
         logger.warning(
-            "Clipping fetch start for %s from %s to %s: Yahoo serves %s data only for the last %s days",
-            ticker.value,
-            start,
-            earliest,
-            interval,
-            MAX_FETCH_DAYS,
+            f"Clipping fetch start for {ticker.value} from {start} to {earliest}: "
+            f"Yahoo serves {interval} data only for the last {MAX_FETCH_DAYS} days"
         )
         start = earliest
 
     data_chunks = []
     chunk_days = CHUNK_DAYS
     current = start
-    logger.info("Downloading %s from %s to %s", ticker.value, start, end)
+    logger.info(f"Downloading {ticker.value} from {start} to {end}")
 
     while current < end:
         current_end = min(current + timedelta(days=chunk_days), end)
@@ -102,19 +98,12 @@ def get_stock_data(
             )
         except Exception as exc:
             logger.error(
-                "Download failed for %s from %s to %s: %s",
-                ticker.value,
-                current,
-                current_end,
-                exc,
+                f"Download failed for {ticker.value} from {current} to {current_end}: {exc}"
             )
         else:
             if data is None or data.empty:
                 logger.error(
-                    "No data for %s from %s to %s",
-                    ticker.value,
-                    current,
-                    current_end,
+                    f"No data for {ticker.value} from {current} to {current_end}"
                 )
             elif not validate_ohcv(data):
                 raise ValueError(
@@ -129,10 +118,7 @@ def get_stock_data(
         raise DownloadError(f"No data downloaded for {ticker.value} from {start} to {end}")
     frame = pd.concat(data_chunks).sort_index()
     logger.info(
-        "Downloaded %s: %d bars from %s to %s",
-        ticker.value,
-        len(frame),
-        frame.index.min(),
-        frame.index.max(),
+        f"Downloaded {ticker.value}: {len(frame)} bars from "
+        f"{frame.index.min()} to {frame.index.max()}"
     )
     return frame
