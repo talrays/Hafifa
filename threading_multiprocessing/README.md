@@ -158,4 +158,4 @@ Symbols sent to Yahoo are the enum values `BTC`, `GOOGL`, and `AMZN`.
 
 ## Output
 
-`build_report` concatenates `Stock.get_required_data()` for each ticker. `write_report` writes that frame with `DataFrame.to_csv(..., index=False)`. The columns that survive are the OHLCV columns present on the filtered frames.
+`build_report` concatenates one row per required minute that has downloaded OHLCV, in ticker list order. Each row has `timestamp`, `stock_type` (enum value), and `price_change` (percent move from that minute's open to close). `write_report` writes those columns with `DataFrame.to_csv(..., index=False)` (`REPORT_COLUMNS`).
