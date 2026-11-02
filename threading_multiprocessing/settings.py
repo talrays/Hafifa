@@ -13,10 +13,11 @@ from constants import (
     DEFAULT_DESTINATION_FILE_PATH,
     DEFAULT_MAX_WORKERS,
     MIN_WORKERS,
+    PROJECT_ROOT,
     TIMESTAMP_FILE_SUFFIX,
 )
 from models import StockTicker
-from utils import PROJECT_ROOT, resolve_project_path
+from utils import resolve_project_path
 
 
 class Settings(BaseSettings):

@@ -5,9 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from constants import TIMESTAMP_FLOOR, TIMESTAMP_FORMAT
-
-PROJECT_ROOT = Path(__file__).resolve().parent
+from constants import PROJECT_ROOT, TIMESTAMP_FLOOR, TIMESTAMP_FORMAT
 
 
 def resolve_project_path(path: str) -> str:
