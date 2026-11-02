@@ -1,4 +1,9 @@
-"""Runtime settings: tickers, timestamp files, output path, and worker count."""
+"""Runtime settings for one pipeline run.
+
+Loads optional overrides from ``.env`` beside this package, resolves paths
+relative to the project directory, and exposes tickers, timestamp file paths,
+the CSV destination, and thread-pool size.
+"""
 
 from models import StockTicker
 from typing import List, Dict
@@ -22,7 +27,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 def resolve_project_path(path: str) -> str:
-    """Turn a project-relative path into an absolute path under ``PROJECT_ROOT``."""
+    """Turn a project-relative path into an absolute path under ``PROJECT_ROOT``.
+
+    Absolute paths are returned unchanged.
+    """
     candidate = Path(path)
     if candidate.is_absolute():
         return str(candidate)
@@ -32,9 +40,16 @@ logger = getLogger(__name__)
 
 
 class Config:
-    """Paths and concurrency limits for one pipeline run."""
+    """Immutable view of paths and concurrency limits for one pipeline run."""
 
-    def __init__(self, stock_tickers: List[StockTicker], timestamps_file_path_dict: Dict[StockTicker, str], destination_file_path: str, max_workers: int):
+    def __init__(
+        self,
+        stock_tickers: List[StockTicker],
+        timestamps_file_path_dict: Dict[StockTicker, str],
+        destination_file_path: str,
+        max_workers: int,
+    ):
+        """Store tickers, absolute timestamp file paths, report path, and worker count."""
         self._stock_tickers = stock_tickers
         self._timestamps_file_path_dict = timestamps_file_path_dict
         self._destination_file_path = destination_file_path
@@ -42,10 +57,16 @@ class Config:
 
     @classmethod
     def from_env(cls) -> "Config":
-        """Build config for BTC, GOOGL, and AMZN.
+        """Build config from ``constants`` defaults and environment variables.
 
-        Timestamp files are ``data/{TICKER}.txt``. Destination path and worker count
-        fall back to ``DEFAULT_DESTINATION_FILE_PATH`` and ``DEFAULT_MAX_WORKERS``.
+        Tickers come from ``DEFAULT_TICKERS``. Timestamp files are
+        ``data/{TICKER}.txt`` under the project directory. ``DESTINATION_FILE_PATH``
+        and ``MAX_WORKERS`` override ``DEFAULT_DESTINATION_FILE_PATH`` and
+        ``DEFAULT_MAX_WORKERS`` when set.
+
+        Raises:
+            ConfigError: When ``MAX_WORKERS`` is not an integer or is below
+                ``MIN_WORKERS``.
         """
         load_dotenv(PROJECT_ROOT / ".env")
         stock_tickers = [StockTicker(symbol) for symbol in DEFAULT_TICKERS]
@@ -81,18 +102,22 @@ class Config:
         return config
     @property
     def stock_tickers(self) -> list[StockTicker]:
+        """Tickers to fetch and include in the report."""
         return self._stock_tickers
 
     @property
     def timestamps_file_path_dict(self) -> dict[StockTicker, str]:
+        """Absolute path to each ticker's required-minute timestamp file."""
         return self._timestamps_file_path_dict
 
     @property
     def destination_file_path(self) -> str:
+        """Absolute path where ``write_report`` should write the CSV."""
         return self._destination_file_path
 
     @property
     def max_workers(self) -> int:
+        """Size of the thread pool used for Yahoo downloads."""
         return self._max_workers
 
 

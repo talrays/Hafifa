@@ -1,4 +1,9 @@
-"""Load timestamp files, fetch each ticker in parallel, and write the CSV."""
+"""Orchestrate timestamp loading, parallel Yahoo fetches, and CSV output.
+
+``run_pipeline`` is the only public entry point. It validates each ticker's
+fetch window, downloads OHLCV in parallel, merges bars into ``Stock`` models,
+and writes the combined report.
+"""
 
 from logging import getLogger
 from config import Config
@@ -13,12 +18,19 @@ from constants import MAX_FETCH_DAYS
 logger = getLogger(__name__)
 
 def run_pipeline(config: Config) -> None:
-    """Fetch one OHLCV range per ticker, filter to required minutes, write CSV.
+    """Load timestamps, fetch OHLCV for each ticker, and write the CSV report.
 
-    Download jobs share a thread pool of ``config.max_workers``. Each future
-    is read after every job has finished. A failed ticker is logged, the
-    remaining tickers are still collected, and ``PipelineError`` is raised
-    before the CSV is written.
+    For each ticker, required minutes are read from ``config.timestamps_file_path_dict``,
+    the min/max minute define the Yahoo window, and ``validate_date_range`` must pass
+    before a download job is queued. Jobs run in a pool of ``config.max_workers``
+    threads; futures are consumed in ticker order after all jobs complete.
+
+    Raises:
+        PipelineError: When any ticker's window is invalid, any fetch fails, or
+            report building or writing fails. Failures are summarized in the message;
+            per-ticker errors are also logged at ERROR.
+        FileNotFoundError: When a timestamp file is missing (from the loader).
+        ValueError: When a timestamp file is empty or malformed (from the loader).
     """
     logger.info("Starting pipeline")
     fetch_jobs = []

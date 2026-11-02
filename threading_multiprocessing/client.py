@@ -1,4 +1,8 @@
-"""Download and normalize minute OHLCV bars from Yahoo Finance."""
+"""Download and normalize minute OHLCV bars from Yahoo Finance via yfinance.
+
+Chunked history requests work around Yahoo's short lookback for 1m data.
+Callers should treat ``validate_date_range`` failures as fatal for that ticker.
+"""
 
 import yfinance as yf
 from datetime import datetime
@@ -13,22 +17,26 @@ logger = getLogger(__name__)
 
 
 def validate_ohcv(data: pd.DataFrame) -> bool:
-    """True when every column is one of the OHLCV columns."""
+    """Return True when every column name is in ``OHLCV_COLUMNS``."""
     return all(data.columns.isin(OHLCV_COLUMNS))
 
 
 def normalize_ohlcv(raw: pd.DataFrame) -> pd.DataFrame:
-    """Keep OHLCV columns, convert the index to naive UTC, and sort it."""
+    """Subset to OHLCV columns, convert the index to naive UTC, and sort by time."""
     frame = raw.loc[:, list(OHLCV_COLUMNS)].copy()
     if frame.index.tz is not None:
         frame.index = frame.index.tz_convert(FETCH_TIMEZONE).tz_localize(None)
     return frame.sort_index()
 
 def validate_date_range(start: datetime, end: datetime) -> bool:
-    """Require ``start <= end`` and ``end`` within the last ``MAX_FETCH_DAYS``.
+    """Check that Yahoo can serve 1m bars for ``[start, end]``.
 
-    Raises ``ValueError`` when either check fails. Callers do not catch this:
-    a range Yahoo cannot serve means the report would be wrong.
+    Returns:
+        True when ``start <= end`` and ``end`` is within the last ``MAX_FETCH_DAYS``.
+
+    Raises:
+        ValueError: When the range is inverted or ``end`` is too old for Yahoo's
+            1m history window.
     """
     if start > end:
         raise ValueError("Start date must be before end date")
@@ -36,13 +44,31 @@ def validate_date_range(start: datetime, end: datetime) -> bool:
         raise ValueError(f"End date must be within the last {MAX_FETCH_DAYS} days")
     return True
 
-def get_stock_data(ticker: StockTicker, start: datetime, end: datetime, interval: str = FETCH_INTERVAL) -> pd.DataFrame:
-    """Download ``ticker`` from ``start`` to ``end`` in ``CHUNK_DAYS`` chunks.
+def get_stock_data(
+    ticker: StockTicker,
+    start: datetime,
+    end: datetime,
+    interval: str = FETCH_INTERVAL,
+) -> pd.DataFrame:
+    """Download and normalize OHLCV for ``ticker`` between ``start`` and ``end``.
 
-    A ``start`` older than ``MAX_FETCH_DAYS`` before now is clipped to that limit.
-    A failed or empty chunk is logged and skipped. A chunk with the wrong
-    columns raises ``ValueError``. When every chunk is skipped, raises
-    ``DownloadError``.
+    Requests are split into ``CHUNK_DAYS`` windows. If ``start`` is older than
+    ``MAX_FETCH_DAYS`` before now, it is clipped to Yahoo's earliest 1m bar.
+    Network errors and empty chunks are logged and skipped; bad column sets fail
+    the whole ticker.
+
+    Args:
+        ticker: Symbol passed to ``yf.Ticker``.
+        start: Inclusive download start (may be clipped).
+        end: Upper bound passed to yfinance for the final chunk.
+        interval: Bar size (default ``FETCH_INTERVAL``, typically ``1m``).
+
+    Returns:
+        Concatenated, sorted frame indexed by bar timestamp with OHLCV columns.
+
+    Raises:
+        ValueError: When ``validate_date_range`` fails or a chunk lacks OHLCV columns.
+        DownloadError: When every chunk failed or returned no rows.
     """
     validate_date_range(start, end)
 

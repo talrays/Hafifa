@@ -1,4 +1,4 @@
-"""Run independent callables on a thread pool and keep submission order."""
+"""Thread-pool helper for I/O-bound work (Yahoo downloads)."""
 
 import concurrent.futures
 from logging import getLogger
@@ -13,11 +13,19 @@ T = TypeVar("T")
 Job = tuple[Callable[..., T], tuple, dict]
 
 def run_in_parallel(jobs: list[Job], max_workers: int) -> list[concurrent.futures.Future[T]]:
-    """Submit each ``(func, args, kwargs)`` job and return futures in order.
+    """Run ``jobs`` concurrently and return futures in submission order.
 
-    Every job has finished before this returns. An empty job list returns
-    ``[]``. Exceptions stay on the futures; the caller reads them with
-    ``Future.result``.
+    Args:
+        jobs: Each entry is ``(callable, args_tuple, kwargs_dict)``.
+        max_workers: ``ThreadPoolExecutor`` pool size.
+
+    Returns:
+        Futures aligned with ``jobs``. The pool waits for all tasks before
+        returning. An empty ``jobs`` list yields ``[]``.
+
+    Note:
+        Exceptions are stored on the future; callers must call ``Future.result()``
+        to surface them.
     """
     if not jobs:
         return []

@@ -1,4 +1,4 @@
-"""Turn per-ticker frames into the destination CSV."""
+"""Build and write the combined price-change CSV for all tickers."""
 
 from pathlib import Path
 
@@ -11,13 +11,17 @@ logger = getLogger(__name__)
 
 
 def minute_price_change_pct(ohlcv: pd.DataFrame) -> pd.Series:
-    """Percent move from open to close for each 1m bar."""
+    """Compute ``(Close - Open) / Open * 100`` for each row in ``ohlcv``."""
     open_price = ohlcv["Open"]
     return (ohlcv["Close"] - open_price) / open_price * 100
 
 
 def write_report(destination_file_path: str, report: pd.DataFrame) -> None:
-    """Write ``report`` to ``destination_file_path`` without the index."""
+    """Write ``report`` as CSV with ``REPORT_COLUMNS`` and no index.
+
+    Creates parent directories when the destination path includes folders
+    (for example ``output/output.csv``).
+    """
     destination = Path(destination_file_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     report.to_csv(destination, index=False, columns=list(REPORT_COLUMNS))
@@ -25,7 +29,12 @@ def write_report(destination_file_path: str, report: pd.DataFrame) -> None:
 
 
 def build_report(stocks: list[Stock]) -> pd.DataFrame:
-    """One row per required minute that has OHLCV: timestamp, stock_type, price_change."""
+    """Assemble one combined report frame from all ``stocks``.
+
+    Includes only required minutes that have matching OHLCV bars. Tickers with
+    no matches contribute no rows. Returns an empty frame with ``REPORT_COLUMNS``
+    when every slice is empty.
+    """
     slices: list[pd.DataFrame] = []
     for stock in stocks:
         ohlcv = stock.get_required_data()

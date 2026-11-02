@@ -1,13 +1,21 @@
-"""Fatal failures. Callers log these at the boundary that stops the run."""
+"""Typed exceptions for config, download, and pipeline boundaries.
+
+These are raised inside the library and logged in ``main`` or ``run_pipeline``
+before the process exits or before a partial CSV is written.
+"""
 
 
 class ConfigError(Exception):
-    """Environment or settings are invalid; the pipeline was not started."""
+    """Invalid environment or settings; ``run_pipeline`` was never started."""
 
 
 class DownloadError(Exception):
-    """Every chunk for a ticker failed or returned no rows."""
+    """No usable OHLCV chunks for one ticker; typically wrapped in ``PipelineError``."""
 
 
 class PipelineError(Exception):
-    """One or more ticker fetches failed. The report was not written."""
+    """Pipeline stopped before a successful report write.
+
+    Raised when a ticker's fetch window is invalid, one or more downloads fail,
+    or report build/write fails.
+    """

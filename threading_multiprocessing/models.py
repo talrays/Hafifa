@@ -1,4 +1,4 @@
-"""Ticker identities and the OHLCV frame kept for each stock."""
+"""Domain models: ticker symbols and per-ticker OHLCV plus required minutes."""
 
 from enum import Enum
 import pandas as pd
@@ -32,22 +32,22 @@ class Stock:
     required_timestamps: pd.Series = field(default_factory=pd.Series)
     
     def add_data(self, data: pd.DataFrame) -> None:
-        """Append downloaded OHLCV rows onto ``data``."""
+        """Merge downloaded OHLCV rows into ``data`` (no-op when ``data`` is empty)."""
         if data.empty:
             return
         self.data = data if self.data.empty else pd.concat([self.data, data])
     
     def add_timestamps(self, timestamps: pd.Series) -> None:
-        """Append minutes that should appear in the report."""
+        """Append minutes that must appear in the final CSV."""
         self.required_timestamps = pd.concat([self.required_timestamps, timestamps])
 
     def get_required_data(self) -> pd.DataFrame:
-        """Rows whose index is one of ``required_timestamps``."""
+        """OHLCV rows whose index is listed in ``required_timestamps``."""
         return self.data.loc[self.data.index.isin(self.required_timestamps)]
 
 
     def get_required_timestamps(self) -> pd.Series:
-        """Minutes this stock must cover."""
+        """Required report minutes for this ticker (may include duplicates)."""
         return self.required_timestamps
     
     def get_min_required_timestamp(self) -> datetime:
@@ -57,10 +57,4 @@ class Stock:
     def get_max_required_timestamp(self) -> datetime:
         """Latest required minute. Used as the Yahoo download end."""
         return self.required_timestamps.max()
-  
-
-    
-    
-    
-
 

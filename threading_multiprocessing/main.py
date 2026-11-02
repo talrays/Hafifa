@@ -21,7 +21,12 @@ logger = getLogger(__name__)
 
 
 def main() -> None:
-    """Run the pipeline. On a fatal error, log and exit 1."""
+    """Load config, run the pipeline, and map failures to process exit codes.
+
+    ``ConfigError`` and ``PipelineError`` are logged at ERROR with a short message.
+    Any other exception is logged with a traceback. Success returns normally;
+    failure calls ``sys.exit(EXIT_CODE_FAILURE)``.
+    """
     try:
         config = Config.from_env()
         run_pipeline(config)
