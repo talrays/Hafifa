@@ -7,14 +7,7 @@ from models import StockTicker
 from datetime import timedelta
 from logging import getLogger
 from errors import DownloadError
-from constants import (
-    CHUNK_DAYS,
-    FETCH_INTERVAL,
-    FETCH_START_MARGIN_MINUTES,
-    FETCH_TIMEZONE,
-    MAX_FETCH_DAYS,
-    OHLCV_COLUMNS,
-)
+from constants import CHUNK_DAYS, FETCH_INTERVAL, FETCH_TIMEZONE, MAX_FETCH_DAYS, OHLCV_COLUMNS
 
 logger = getLogger(__name__)
 
@@ -53,8 +46,8 @@ def get_stock_data(ticker: StockTicker, start: datetime, end: datetime, interval
     """
     validate_date_range(start, end)
 
-    # Yahoo measures its window from now, not from ``end``; the margin absorbs request latency.
-    earliest = datetime.now() - timedelta(days=MAX_FETCH_DAYS) + timedelta(minutes=FETCH_START_MARGIN_MINUTES)
+    # Yahoo measures its window from now, not from ``end``.
+    earliest = datetime.now() - timedelta(days=MAX_FETCH_DAYS)
     if start < earliest:
         logger.warning(
             "Clipping fetch start for %s from %s to %s: Yahoo serves %s data only for the last %s days",
