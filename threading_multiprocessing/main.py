@@ -6,7 +6,7 @@ from logging import getLogger, basicConfig
 from pipeline import run_pipeline
 from config import Config
 from errors import ConfigError, PipelineError
-from constants import EXIT_CODE_FAILURE, LOG_DATE_FORMAT, LOG_FORMAT, LOG_LEVEL
+from constants import LOG_DATE_FORMAT, LOG_FORMAT, LOG_LEVEL
 
 
 basicConfig(level=LOG_LEVEL, format=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
@@ -19,28 +19,18 @@ warnings.filterwarnings(
 )
 logger = getLogger(__name__)
 
-
-def main() -> None:
-    """Load config, run the pipeline, and map failures to process exit codes.
-
-    ``ConfigError`` and ``PipelineError`` are logged at ERROR with a short message.
-    Any other exception is logged with a traceback. Success returns normally;
-    failure calls ``sys.exit(EXIT_CODE_FAILURE)``.
-    """
+def main() -> int:
     try:
         config = Config.from_env()
         run_pipeline(config)
-    except ConfigError as exc:
-        logger.error("Invalid configuration: %s", exc)
-    except PipelineError as exc:
-        logger.error("Pipeline failed: %s", exc)
-    except Exception:
-        logger.exception("Unexpected error")
-    else:
-        return
-    sys.exit(EXIT_CODE_FAILURE)
-
+        return 0  # Success code
+    except (ConfigError, PipelineError) as exc:
+        logger.error(f"Failure: {exc}")
+        return 1  # Failure code
+    except Exception as exc:
+        logger.exception(f"Unexpected error: {exc}")
+        return 1  # Failure code
 
 if __name__ == "__main__":
     logger.info("Starting main")
-    main()
+    sys.exit(main())
