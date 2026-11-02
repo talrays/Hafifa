@@ -1,8 +1,4 @@
 """Shared defaults for config, timestamp files, Yahoo fetches, logging, and CSV layout.
-
-Environment overrides (see ``config.Config.from_env``) only apply to
-``DESTINATION_FILE_PATH`` and ``MAX_WORKERS``; tickers and paths under ``data/``
-are fixed here unless code changes.
 """
 
 import logging
