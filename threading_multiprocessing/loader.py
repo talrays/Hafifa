@@ -4,26 +4,14 @@ Each line is one required report minute. Seconds and microseconds are stripped
 so they align with Yahoo 1m bar indices.
 """
 
-import pandas as pd
 import os
-from datetime import datetime
+
+import pandas as pd
 from logging import getLogger
-from constants import TIMESTAMP_FLOOR, TIMESTAMP_FORMAT
+
+from utils import format_timestamp, strip_seconds_and_microseconds
 
 logger = getLogger(__name__)
-
-
-def format_timestamp(timestamp: str) -> datetime:
-    """Parse one line as ``YYYY-MM-DD HH:MM:SS.ffffff``.
-
-    Raises ``ValueError`` when the line does not match that format.
-    """
-    return datetime.strptime(timestamp, TIMESTAMP_FORMAT)
-
-def strip_seconds_and_microseconds(timestamps: pd.Series) -> pd.Series:
-    """Floor each value to the start of its minute (``TIMESTAMP_FLOOR``)."""
-    ts = pd.to_datetime(timestamps)
-    return ts.dt.floor(TIMESTAMP_FLOOR)
 
 
 def read_timestamps_from_txt(file_path: str) -> pd.Series:

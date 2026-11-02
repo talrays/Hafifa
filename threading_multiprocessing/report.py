@@ -6,14 +6,9 @@ import pandas as pd
 from logging import getLogger
 from models import Stock
 from constants import REPORT_COLUMNS, TIMESTAMP_INDEX_NAME
+from utils import minute_price_change_pct
 
 logger = getLogger(__name__)
-
-
-def minute_price_change_pct(ohlcv: pd.DataFrame) -> pd.Series:
-    """Compute ``(Close - Open) / Open * 100`` for each row in ``ohlcv``."""
-    open_price = ohlcv["Open"]
-    return (ohlcv["Close"] - open_price) / open_price * 100
 
 
 def write_report(destination_file_path: str, report: pd.DataFrame) -> None:

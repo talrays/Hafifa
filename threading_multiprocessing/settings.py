@@ -5,8 +5,6 @@ relative to the project directory, and exposes tickers, timestamp file paths,
 the CSV destination, and thread-pool size.
 """
 
-from pathlib import Path
-
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,19 +16,7 @@ from constants import (
     TIMESTAMP_FILE_SUFFIX,
 )
 from models import StockTicker
-
-PROJECT_ROOT = Path(__file__).resolve().parent
-
-
-def resolve_project_path(path: str) -> str:
-    """Turn a project-relative path into an absolute path under ``PROJECT_ROOT``.
-
-    Absolute paths are returned unchanged.
-    """
-    candidate = Path(path)
-    if candidate.is_absolute():
-        return str(candidate)
-    return str(PROJECT_ROOT / candidate)
+from utils import PROJECT_ROOT, resolve_project_path
 
 
 class Settings(BaseSettings):
