@@ -1,11 +1,13 @@
-"""Entry point: load config from the environment and run the stock pipeline."""
+"""Entry point: load settings from the environment and run the stock pipeline."""
 
 import sys
 import warnings
 from logging import getLogger, basicConfig
+from pydantic import ValidationError
+
 from pipeline import run_pipeline
-from config import Config
-from errors import ConfigError, PipelineError
+from settings import Settings
+from errors import PipelineError
 from constants import LOG_DATE_FORMAT, LOG_FORMAT, LOG_LEVEL
 
 
@@ -21,10 +23,10 @@ logger = getLogger(__name__)
 
 def main() -> int:
     try:
-        config = Config.from_env()
-        run_pipeline(config)
+        settings = Settings()
+        run_pipeline(settings)
         return 0  # Success code
-    except (ConfigError, PipelineError) as exc:
+    except (ValidationError, PipelineError) as exc:
         logger.error(f"Failure: {exc}")
         return 1  # Failure code
     except Exception as exc:

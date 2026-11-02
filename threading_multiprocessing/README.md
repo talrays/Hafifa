@@ -32,7 +32,7 @@ Fetches minute OHLCV bars for BTC, GOOGL, and AMZN, keeps the minutes listed in 
 
 ## Setup
 
-Dependencies live in `pyproject.toml` (`yfinance`, `pandas`, `python-dotenv`). From this directory:
+Dependencies live in `pyproject.toml` (`yfinance`, `pandas`, `pydantic-settings`). From this directory:
 
 **Recommended ([uv](https://docs.astral.sh/uv/)):**
 
@@ -48,7 +48,7 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 ```bash
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install "yfinance>=0.2,<1" "pandas>=2.0,<3" "python-dotenv>=1.0,<2"
+pip install "yfinance>=0.2,<1" "pandas>=2.0,<3" "pydantic-settings>=2.0,<3"
 ```
 
 ## Run
@@ -59,18 +59,18 @@ With the virtual environment active:
 python main.py
 ```
 
-`main.py` loads `.env`, builds a `Config`, and calls `run_pipeline`. Default logging is INFO with timestamps (`LOG_FORMAT` in `constants.py`). Set the root logger to DEBUG to see per-file timestamp parsing from `loader`.
+`main.py` loads `.env`, builds a `Settings`, and calls `run_pipeline`. Default logging is INFO with timestamps (`LOG_FORMAT` in `constants.py`). Set the root logger to DEBUG to see per-file timestamp parsing from `loader`.
 
 ## Configuration
 
-`Config.from_env` reads:
+`Settings()` reads:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `DESTINATION_FILE_PATH` | `output/output.csv` | CSV written by `write_report` (relative to the project directory) |
 | `MAX_WORKERS` | `10` | Thread pool size for Yahoo downloads |
 
-Tickers are defined in `models.StockTicker` (`BTC`, `GOOGL`, `AMZN`). Filename suffixes, the fetch window, and env defaults live in `constants.py`. Each ticker’s timestamps are read from `data/{TICKER}.txt` (`data/BTC.txt`, `data/GOOGL.txt`, `data/AMZN.txt`). Paths are resolved from the project directory (where `config.py` lives), not the shell’s current working directory.
+Tickers are defined in `models.StockTicker` (`BTC`, `GOOGL`, `AMZN`). Filename suffixes, the fetch window, and env defaults live in `constants.py`. Each ticker’s timestamps are read from `data/{TICKER}.txt` (`data/BTC.txt`, `data/GOOGL.txt`, `data/AMZN.txt`). Paths are resolved from the project directory (where `settings.py` lives), not the shell’s current working directory.
 
 ## Data flow
 
@@ -91,7 +91,7 @@ data/{TICKER}.txt
 | --- | --- |
 | `main.py` | Process entry point. Logs a fatal error and exits 1 |
 | `constants.py` | Env defaults, timestamp format, OHLCV columns, fetch window |
-| `config.py` | `StockTicker` list, timestamp paths, output path, worker count |
+| `settings.py` | `StockTicker` list, timestamp paths, output path, worker count |
 | `loader.py` | Timestamp files into a `datetime` series |
 | `models.py` | `StockTicker` enum (symbol list) and the `Stock` OHLCV frame |
 | `client.py` | Yahoo Finance download, validation, and normalization |
@@ -118,7 +118,6 @@ A successful run roughly looks like:
 
 ```text
 main          → Starting main
-config        → Config loaded (tickers, destination, max_workers)
 pipeline      → Starting pipeline
 pipeline      → Loaded {TICKER} (minute count, file, fetch window)
 threads       → Running N jobs in thread pool
@@ -136,7 +135,7 @@ Leaves raise and do not log. The layer that decides to stop the run is the one t
 
 | Failure | Where it is raised | What happens |
 | --- | --- | --- |
-| Bad `MAX_WORKERS`, missing or unreadable timestamp file | `config`, `loader` | Propagates to `main` |
+| Bad `MAX_WORKERS`, missing or unreadable timestamp file | `settings`, `loader` | Propagates to `main` |
 | End timestamp older than 30 days, or start after end | `validate_date_range` | Propagates out of that ticker's job |
 | One 7-day chunk fails or is empty | `get_stock_data` | Logged and skipped |
 | Chunk columns are not OHLCV | `get_stock_data` | `ValueError` for that ticker |

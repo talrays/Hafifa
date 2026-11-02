@@ -1,12 +1,8 @@
-"""Typed exceptions for config, download, and pipeline boundaries.
+"""Typed exceptions for download and pipeline boundaries.
 
 These are raised inside the library and logged in ``main`` or ``run_pipeline``
 before the process exits or before a partial CSV is written.
 """
-
-
-class ConfigError(Exception):
-    """Invalid environment or settings; ``run_pipeline`` was never started."""
 
 
 class DownloadError(Exception):

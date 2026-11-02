@@ -9,7 +9,7 @@ from logging import getLogger
 
 import pandas as pd
 
-from config import Config
+from settings import Settings
 from loader import read_timestamps_from_txt
 from models import Stock, StockTicker
 from client import get_stock_data, validate_date_range
@@ -20,12 +20,12 @@ from constants import MAX_FETCH_DAYS
 
 logger = getLogger(__name__)
 
-def run_pipeline(config: Config) -> None:
+def run_pipeline(settings: Settings) -> None:
     """Load timestamps, fetch OHLCV for each ticker, and write the CSV report.
 
-    For each ticker, required minutes are read from ``config.timestamps_file_path_dict``,
+    For each ticker, required minutes are read from ``settings.timestamps_file_path_dict``,
     the min/max minute define the Yahoo window, and ``validate_date_range`` must pass
-    before a download job is queued. Jobs run in a pool of ``config.max_workers``
+    before a download job is queued. Jobs run in a pool of ``settings.max_workers``
     threads; futures are consumed in ticker order after all jobs complete.
 
     Raises:
@@ -39,8 +39,8 @@ def run_pipeline(config: Config) -> None:
     fetch_jobs = []
     load_specs: list[tuple[StockTicker, pd.Series]] = []
     window_failures: list[tuple[str, Exception]] = []
-    for ticker in config.stock_tickers:
-        path = config.timestamps_file_path_dict[ticker]
+    for ticker in settings.stock_tickers:
+        path = settings.timestamps_file_path_dict[ticker]
         timestamps = read_timestamps_from_txt(path)
         start, end = timestamps.min(), timestamps.max()
         try:
@@ -63,7 +63,7 @@ def run_pipeline(config: Config) -> None:
         summary = "; ".join(f"{ticker}: {exc}" for ticker, exc in window_failures)
         raise PipelineError(summary)
 
-    futures = run_in_parallel(fetch_jobs, config.max_workers)
+    futures = run_in_parallel(fetch_jobs, settings.max_workers)
     results = []
     failures: list[tuple[str, Exception]] = []
     for (ticker, _timestamps), future in zip(load_specs, futures):
@@ -89,7 +89,7 @@ def run_pipeline(config: Config) -> None:
     logger.info(f"Building report for {len(stocks)} tickers")
     try:
         report = build_report(stocks)
-        write_report(config.destination_file_path, report)
+        write_report(settings.destination_file_path, report)
     except Exception as exc:
         logger.error(f"Report failed: {exc}")
         raise PipelineError(f"Report failed: {exc}")
