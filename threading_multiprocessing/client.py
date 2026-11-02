@@ -7,7 +7,14 @@ from models import StockTicker
 from datetime import timedelta
 from logging import getLogger
 from errors import DownloadError
-from constants import CHUNK_DAYS, FETCH_INTERVAL, FETCH_TIMEZONE, MAX_FETCH_DAYS, OHLCV_COLUMNS
+from constants import (
+    CHUNK_DAYS,
+    FETCH_INTERVAL,
+    FETCH_START_MARGIN_MINUTES,
+    FETCH_TIMEZONE,
+    MAX_FETCH_DAYS,
+    OHLCV_COLUMNS,
+)
 
 logger = getLogger(__name__)
 
@@ -39,20 +46,25 @@ def validate_date_range(start: datetime, end: datetime) -> bool:
 def get_stock_data(ticker: StockTicker, start: datetime, end: datetime, interval: str = FETCH_INTERVAL) -> pd.DataFrame:
     """Download ``ticker`` from ``start`` to ``end`` in ``CHUNK_DAYS`` chunks.
 
-    Ranges longer than ``MAX_FETCH_DAYS`` are clipped to that many days before ``end``.
+    A ``start`` older than ``MAX_FETCH_DAYS`` before now is clipped to that limit.
     A failed or empty chunk is logged and skipped. A chunk with the wrong
     columns raises ``ValueError``. When every chunk is skipped, raises
     ``DownloadError``.
     """
     validate_date_range(start, end)
 
-    if end - start > timedelta(days=MAX_FETCH_DAYS):
+    # Yahoo measures its window from now, not from ``end``; the margin absorbs request latency.
+    earliest = datetime.now() - timedelta(days=MAX_FETCH_DAYS) + timedelta(minutes=FETCH_START_MARGIN_MINUTES)
+    if start < earliest:
         logger.warning(
-            "Clipping fetch start to %s days before end for %s interval",
-            MAX_FETCH_DAYS,
+            "Clipping fetch start for %s from %s to %s: Yahoo serves %s data only for the last %s days",
+            ticker.value,
+            start,
+            earliest,
             interval,
+            MAX_FETCH_DAYS,
         )
-        start = end - timedelta(days=MAX_FETCH_DAYS)
+        start = earliest
 
     data_chunks = []
     chunk_days = CHUNK_DAYS
@@ -62,13 +74,12 @@ def get_stock_data(ticker: StockTicker, start: datetime, end: datetime, interval
     while current < end:
         current_end = min(current + timedelta(days=chunk_days), end)
         try:
-            data = yf.download(
-                ticker.value,
+            # yf.download shares module-level state across calls, so it is not thread-safe.
+            data = yf.Ticker(ticker.value).history(
                 start=current,
                 end=current_end,
                 interval=interval,
-                multi_level_index=False,
-                progress=False,
+                actions=False,
             )
         except Exception as exc:
             logger.error(

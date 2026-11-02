@@ -33,7 +33,9 @@ class Stock:
     
     def add_data(self, data: pd.DataFrame) -> None:
         """Append downloaded OHLCV rows onto ``data``."""
-        self.data = pd.concat([self.data, data])
+        if data.empty:
+            return
+        self.data = data if self.data.empty else pd.concat([self.data, data])
     
     def add_timestamps(self, timestamps: pd.Series) -> None:
         """Append minutes that should appear in the report."""
