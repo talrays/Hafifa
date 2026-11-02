@@ -70,7 +70,7 @@ python main.py
 | `DESTINATION_FILE_PATH` | `output/output.csv` | CSV written by `write_report` (relative to the project directory) |
 | `MAX_WORKERS` | `10` | Thread pool size for Yahoo downloads |
 
-Tickers, filename suffixes, the fetch window, and these defaults live in `constants.py`. The tickers are `BTC`, `GOOGL`, and `AMZN`. Each ticker’s timestamps are read from `data/{TICKER}.txt` (`data/BTC.txt`, `data/GOOGL.txt`, `data/AMZN.txt`). Paths are resolved from the project directory (where `config.py` lives), not the shell’s current working directory.
+Tickers are defined in `models.StockTicker` (`BTC`, `GOOGL`, `AMZN`). Filename suffixes, the fetch window, and env defaults live in `constants.py`. Each ticker’s timestamps are read from `data/{TICKER}.txt` (`data/BTC.txt`, `data/GOOGL.txt`, `data/AMZN.txt`). Paths are resolved from the project directory (where `config.py` lives), not the shell’s current working directory.
 
 ## Data flow
 
@@ -91,10 +91,10 @@ data/{TICKER}.txt
 | Module | Role |
 | --- | --- |
 | `main.py` | Process entry point. Logs a fatal error and exits 1 |
-| `constants.py` | Tickers, env defaults, timestamp format, OHLCV columns, fetch window |
-| `config.py` | Tickers, timestamp paths, output path, worker count |
+| `constants.py` | Env defaults, timestamp format, OHLCV columns, fetch window |
+| `config.py` | `StockTicker` list, timestamp paths, output path, worker count |
 | `loader.py` | Timestamp files into a `datetime` series |
-| `models.py` | `StockTicker` and the `Stock` OHLCV frame |
+| `models.py` | `StockTicker` enum (symbol list) and the `Stock` OHLCV frame |
 | `client.py` | Yahoo Finance download, validation, and normalization |
 | `errors.py` | `DownloadError` and `PipelineError` |
 | `threads.py` | Thread pool runner. Returns futures; does not catch |

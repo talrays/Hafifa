@@ -32,24 +32,15 @@ class Stock:
     required_timestamps: pd.Series = field(default_factory=pd.Series)
     
     def add_data(self, data: pd.DataFrame) -> None:
-        """Merge downloaded OHLCV rows into ``data`` (no-op when ``data`` is empty)."""
+        """Replace ``data`` with downloaded OHLCV (no-op when ``data`` is empty)."""
         if data.empty:
             return
-        self.data = data if self.data.empty else pd.concat([self.data, data])
-    
-    def add_timestamps(self, timestamps: pd.Series) -> None:
-        """Append minutes that must appear in the final CSV."""
-        self.required_timestamps = pd.concat([self.required_timestamps, timestamps])
+        self.data = data
 
     def get_required_data(self) -> pd.DataFrame:
         """OHLCV rows whose index is listed in ``required_timestamps``."""
         return self.data.loc[self.data.index.isin(self.required_timestamps)]
 
-
-    def get_required_timestamps(self) -> pd.Series:
-        """Required report minutes for this ticker (may include duplicates)."""
-        return self.required_timestamps
-    
     def get_min_required_timestamp(self) -> datetime:
         """Earliest required minute. Used as the Yahoo download start."""
         return self.required_timestamps.min()

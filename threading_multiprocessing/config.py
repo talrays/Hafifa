@@ -15,7 +15,6 @@ from constants import (
     DATA_DIR,
     DEFAULT_DESTINATION_FILE_PATH,
     DEFAULT_MAX_WORKERS,
-    DEFAULT_TICKERS,
     ENV_DESTINATION_FILE_PATH,
     ENV_MAX_WORKERS,
     MIN_WORKERS,
@@ -59,7 +58,7 @@ class Config:
     def from_env(cls) -> "Config":
         """Build config from ``constants`` defaults and environment variables.
 
-        Tickers come from ``DEFAULT_TICKERS``. Timestamp files are
+        Tickers come from ``StockTicker`` (enum definition order). Timestamp files are
         ``data/{TICKER}.txt`` under the project directory. ``DESTINATION_FILE_PATH``
         and ``MAX_WORKERS`` override ``DEFAULT_DESTINATION_FILE_PATH`` and
         ``DEFAULT_MAX_WORKERS`` when set.
@@ -69,7 +68,7 @@ class Config:
                 ``MIN_WORKERS``.
         """
         load_dotenv(PROJECT_ROOT / ".env")
-        stock_tickers = [StockTicker(symbol) for symbol in DEFAULT_TICKERS]
+        stock_tickers = list(StockTicker)
         timestamps_file_path_dict = {
             ticker: str(PROJECT_ROOT / DATA_DIR / f"{ticker.value}{TIMESTAMP_FILE_SUFFIX}")
             for ticker in stock_tickers
